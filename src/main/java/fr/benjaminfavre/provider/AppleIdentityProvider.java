@@ -1,5 +1,6 @@
 package fr.benjaminfavre.provider;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.keycloak.OAuth2Constants;
 import org.keycloak.broker.oidc.AbstractOAuth2IdentityProvider;
 import org.keycloak.broker.oidc.OIDCIdentityProvider;
@@ -26,6 +27,7 @@ import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Base64;
+import java.util.UUID;
 
 public class AppleIdentityProvider extends OIDCIdentityProvider implements SocialIdentityProvider<OIDCIdentityProviderConfig> {
     private String userJson;
@@ -48,12 +50,16 @@ public class AppleIdentityProvider extends OIDCIdentityProvider implements Socia
         if (userJson != null) {
             try {
                 User user = JsonSerialization.readValue(userJson, User.class);
-                context.setEmail(user.email);
-                context.setFirstName(user.name.firstName);
-                context.setLastName(user.name.lastName);
+                context.setEmail(user.email != null ? user.email : UUID.randomUUID() + "@apple.com");
+                context.setFirstName(user.name.firstName != null ? user.name.firstName : "Unknown");
+                context.setLastName(user.name.lastName != null ? user.name.lastName : "Climber");
             } catch (IOException e) {
                 logger.errorf("Failed to parse userJson [%s]: %s", userJson, e);
             }
+        } else {
+            context.setEmail(UUID.randomUUID() + "@apple.com");
+            context.setFirstName("Unknown");
+            context.setLastName("Climber");
         }
 
         return context;
@@ -115,10 +121,12 @@ public class AppleIdentityProvider extends OIDCIdentityProvider implements Socia
         }
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     private static class User {
         public String email;
         public Name name;
 
+        @JsonIgnoreProperties(ignoreUnknown = true)
         private static class Name {
             public String firstName;
             public String lastName;
